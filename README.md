@@ -1,5 +1,11 @@
 # File Q&A
 
+This app is for my personal use.
+
+The original app, called File Q&A, can be found at [OpenAI-cookbookFile](https://github.com/openai/openai-cookbook).
+
+Initially, it only supported the text-davinci-003 model. However, it now also supports GPT-3.5 and GPT-4 models.
+
 File Q&A is a [Next.js](https://nextjs.org/) app that lets you find answers in your files using OpenAI APIs. You can upload files and ask questions related to their content, and the app will use embeddings and GPT to generate answers from the most relevant files.
 
 ## Requirements
