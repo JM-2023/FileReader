@@ -1,9 +1,8 @@
 import { IncomingMessage } from "http";
 import {
-  ChatCompletionRequestMessageRoleEnum,
   Configuration,
-  CreateChatCompletionResponse,
   CreateCompletionRequest,
+  CreateChatCompletionResponse,
   OpenAIApi,
 } from "openai";
 
@@ -31,30 +30,18 @@ type EmbeddingOptions = {
 export async function completion({
   prompt,
   fallback,
-  max_tokens,
-  temperature = 0,
-  model = "gpt-3.5-turbo", // use gpt-4 for better results
 }: CompletionOptions) {
   try {
-    // Note: this is not the proper way to use the ChatGPT conversational format, but it works for now
-    const messages = [
-      {
-        role: ChatCompletionRequestMessageRoleEnum.System,
-        content: prompt ?? "",
-      },
-    ];
-
     const result = await openai.createChatCompletion({
-      model,
-      messages,
-      temperature,
-      max_tokens: max_tokens ?? 800,
+      model: "gpt-3.5-turbo",
+      messages: [{role: "user", content: prompt}],
+      temperature: 0,
     });
 
-    if (!result.data.choices[0].message) {
-      throw new Error("No text returned from completions endpoint");
+    if (!result.data.choices[0].message?.content) {
+      throw new Error("No text returned from the completions endpoint.");
     }
-    return result.data.choices[0].message.content;
+    return result.data.choices[0].message?.content;
   } catch (error) {
     if (fallback) return fallback;
     else throw error;
@@ -64,66 +51,32 @@ export async function completion({
 export async function* completionStream({
   prompt,
   fallback,
-  max_tokens = 800,
-  temperature = 0,
-  model = "gpt-3.5-turbo", // use gpt-4 for better results
 }: CompletionOptions) {
   try {
-    // Note: this is not the proper way to use the ChatGPT conversational format, but it works for now
-    const messages = [
-      {
-        role: ChatCompletionRequestMessageRoleEnum.System,
-        content: prompt ?? "",
-      },
-    ];
-
     const result = await openai.createChatCompletion(
       {
-        model,
-        messages,
-        temperature,
-        max_tokens: max_tokens ?? 800,
-        stream: true,
+        model: "gpt-3.5-turbo",
+        messages: [{role: "user", content: prompt}],
+        temperature: 0,
       },
-      {
-        responseType: "stream",
-      }
+      { responseType: "stream" }
     );
+    
     const stream = result.data as any as IncomingMessage;
-
-    let buffer = "";
-    const textDecoder = new TextDecoder();
-
+    let accumulatedData = "";
     for await (const chunk of stream) {
-      buffer += textDecoder.decode(chunk, { stream: true });
-      const lines = buffer.split("\n");
-
-      // Check if the last line is complete
-      if (buffer.endsWith("\n")) {
-        buffer = "";
+      const line = chunk.toString().trim();
+      accumulatedData += line;
+    
+      // Check if the accumulated data is a complete JSON object
+      if (accumulatedData.endsWith("}")) {
+        const data = JSON.parse(accumulatedData) as CreateChatCompletionResponse;
+        yield data.choices[0].message?.content;
+    
+        // Reset accumulatedData for the next JSON object
+        accumulatedData = "";
       } else {
-        buffer = lines.pop() || "";
-      }
-
-      for (const line of lines) {
-        const message = line.trim().split("data: ")[1];
-        if (message === "[DONE]") {
-          break;
-        }
-
-        // Check if the message is not undefined and a valid JSON string
-        if (message) {
-          try {
-            const data = JSON.parse(message) as CreateChatCompletionResponse;
-            // @ts-ignore
-            if (data.choices[0].delta?.content) {
-              // @ts-ignore
-              yield data.choices[0].delta?.content;
-            }
-          } catch (error) {
-            console.error("Error parsing JSON message:", error);
-          }
-        }
+        console.log("Accumulating data:", line);
       }
     }
   } catch (error) {

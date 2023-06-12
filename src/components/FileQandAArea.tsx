@@ -74,13 +74,6 @@ function FileQandAArea(props: FileQandAAreaProps) {
         fileChunks: results,
       }),
     });
-
-    if (res.status === 500) {
-      setAnswerError("Internal server error. Please try again later.");
-      setAnswerLoading(false);
-      return;
-    }
-
     const reader = res.body!.getReader();
 
     while (true) {

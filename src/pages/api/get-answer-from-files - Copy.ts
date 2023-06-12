@@ -46,9 +46,9 @@ export default async function handler(
     const prompt =
     `Answer the question based on the content of the provided files below. Do NOT miss any information from the provided files below. Use line breaks to improve readability.Bold the key word.\n\n` +
     `You will bold the relevant parts of the responses to improve readability.\n\n` +
-    `Question: \"\"\"${question}\"\"\"\n\n` +
-    `Files:\n\"\"\"${filesString}\"\"\"\n\n` +
-    `Answer in Markdown:"""`;
+    `##Question: ${question}##\n\n` +
+    `Files:\n${filesString}\n\n` +
+    `Answer in Markdown:`;
 
     const stream = completionStream({
       prompt,
